@@ -122,7 +122,7 @@ class CommitLog(seconds: Int, path: String) {
   /** Finishes work with current file.
     *
     */
-  def endSession() = {
+  def close() = {
     if (!firstRun) {
       lastTimeNewFileCreated = -1
       outputStream.close()

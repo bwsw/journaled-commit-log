@@ -19,7 +19,7 @@ object Main extends App {
       Thread.sleep(900)
     }
 
-    commitLog.endSession()
+    commitLog.close()
 
     println("Decoded messages:")
     for (pathToFile <- filesPaths) {
