@@ -10,6 +10,14 @@ import java.util.{Base64, Calendar}
 
 import scala.util.matching.Regex
 
+/** Logger which stores records continuously in files in specified location.
+  *
+  * Stores data in files named YYYY.mm.dd.{serial number}. If it works correctly, md5-files named YYYY.mm.dd.{serial
+  * number}.md5 shall be generated as well. New file starts on user request or when configured time was exceeded.
+  *
+  * @param seconds period of time to write records into the same file, then start new file.
+  * @param path location to store files at.
+  */
 class CommitLog(seconds: Int, path: String) {
   require(seconds > 0, "Seconds cannot be less than 1")
 
@@ -29,7 +37,17 @@ class CommitLog(seconds: Int, path: String) {
   private var lastTimeNewFileCreated: Long = -1
   private var outputStream: BufferedOutputStream = _
 
-  def putRec(msg: Array[Byte], typ: Byte, startNew: Boolean): String = {
+  /** Puts record and its type to an appropriate file.
+    *
+    * Writes data to file in format (delimiter)(BASE64-encoded type and message). When writing to one file finished,
+    * md5-sum file generated.
+    *
+    * @param message message to store.
+    * @param messageType type of message to store.
+    * @param startNew start new file if true.
+    * @return name of file record was saved in.
+    */
+  def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean): String = {
     if (startNew && !firstRun) {
       lastTimeNewFileCreated = -1
       outputStream.close()
@@ -48,7 +66,7 @@ class CommitLog(seconds: Int, path: String) {
       outputStream = new BufferedOutputStream(new FileOutputStream(outputFilePath, true))
     }
 
-    val msgWithType: Array[Byte] = Array[Byte](typ) ++ msg
+    val msgWithType: Array[Byte] = Array[Byte](messageType) ++ message
     Stream.continually(outputStream.write(Array[Byte](delimiter) ++ base64Encoder.encode(msgWithType)))
     outputStream.flush()
 
@@ -58,6 +76,11 @@ class CommitLog(seconds: Int, path: String) {
     return outputFileName
   }
 
+  /** Return decoded messages from specified file.
+    *
+    * @param path path to file to read data from.
+    * @return sequence of decoded messages.
+    */
   def getMessages(path: String): IndexedSeq[Array[Byte]] = {
     val base64decoder: Decoder = Base64.getDecoder
     val byteArray = Files.readAllBytes(Paths.get(path))
@@ -79,12 +102,32 @@ class CommitLog(seconds: Int, path: String) {
     return msgs
   }
 
-  def perf(countOfRecords: Int, msg: Array[Byte], typ: Byte): Long = {
+  /** Performance test.
+    *
+    * Writes specified count of messages to file.
+    *
+    * @param countOfRecords count of records to write.
+    * @param message message to write.
+    * @param typeOfMessage type of message.
+    * @return count of milliseconds writing to file took.
+    */
+  def perf(countOfRecords: Int, message: Array[Byte], typeOfMessage: Byte): Long = {
     require(countOfRecords > 0, "Count of records cannot be less than 1")
 
     val before = System.currentTimeMillis()
-    for (i <- 1 to countOfRecords) putRec(msg, typ, startNew = false)
+    for (i <- 1 to countOfRecords) putRec(message, typeOfMessage, startNew = false)
     System.currentTimeMillis() - before
+  }
+
+  /** Finishes work with current file.
+    *
+    */
+  def endSession() = {
+    if (!firstRun) {
+      lastTimeNewFileCreated = -1
+      outputStream.close()
+      writeMD5()
+    }
   }
 
   private def firstRun() = {
@@ -108,6 +151,11 @@ class CommitLog(seconds: Int, path: String) {
     getCurrentSecs - lastTimeNewFileCreated > nsecs
   }
 
+  /** Return next name of file based on list of existing files.
+    *
+    * Return "YYY.mm.dd.1" if there are no files with names denote current day, otherwise return
+    * "YYY.mm.dd.(next ordinal number)".
+    */
   private def getOutputFileName(existingFiles: List[String]): String = {
     val curDate: String = new SimpleDateFormat("yyyy.MM.dd").format(Calendar.getInstance.getTime)
     if (existingFiles.nonEmpty) {
@@ -120,21 +168,11 @@ class CommitLog(seconds: Int, path: String) {
     return curDate + ".1"
   }
 
-  def endSession() = {
-    if (!firstRun) {
-      outputStream.close()
-      writeMD5()
-    }
-  }
-
-  private def getListOfFiles(path: String, extensions: List[String]): List[File] = {
-    getListOfFiles(path).filter(_.isFile).filter { file =>
-      extensions.exists(file.getName.endsWith(_))
-    }
-  }
-
-  private def getListOfFiles(path: String): List[File] = {
-    val file = new File(path)
+  /** Returns list of files from specified directory.
+    *
+    */
+  private def getListOfFiles(pathToFolder: String): List[File] = {
+    val file = new File(pathToFolder)
     if (file.exists) {
       if (file.isDirectory) {
         file.listFiles.filter(_.isFile).toList
