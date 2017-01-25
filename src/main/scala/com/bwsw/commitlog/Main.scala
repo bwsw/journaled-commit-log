@@ -1,7 +1,7 @@
-package bwsw
+package com.bwsw.commitLog
 
-object Main {
-  def main(args: Array[String]): Unit = {
+object Main extends App {
+  override def main(args: Array[String]): Unit = {
     val storagePath = "/tmp/1"
     val commitLog: CommitLog = new CommitLog(2, storagePath)
     val messages = Array[String]("Hello", "world", "!", "Scala", "is", "great", "!")

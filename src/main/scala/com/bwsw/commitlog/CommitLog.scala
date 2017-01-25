@@ -1,4 +1,4 @@
-package bwsw
+package com.bwsw.commitLog
 
 import java.io._
 import java.math.BigInteger
