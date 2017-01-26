@@ -1,9 +1,11 @@
 package com.bwsw.commitLog
 
+import com.bwsw.commitlog.CommitLogFlushPolicy
+
 object Main extends App {
   override def main(args: Array[String]): Unit = {
     val storagePath = "/tmp/1"
-    val commitLog: CommitLog = new CommitLog(2, storagePath)
+    val commitLog: CommitLog = new CommitLog(2, storagePath, CommitLogFlushPolicy.OnRotation)
     val messages = Array[String]("Hello", "world", "!", "Scala", "is", "great", "!")
     var filesPaths: Set[String] = Set[String]()
 
@@ -16,7 +18,7 @@ object Main extends App {
       val outputFile: String = commitLog.putRec(message.map(_.toByte).to[Array], '.'.toByte, startNew = false)
       println(s"Output file: $outputFile")
       filesPaths = filesPaths + outputFile
-      Thread.sleep(900)
+      Thread.sleep(1100)
     }
 
     commitLog.close()

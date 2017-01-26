@@ -8,6 +8,9 @@ import java.text.SimpleDateFormat
 import java.util.Base64.{Decoder, Encoder}
 import java.util.{Base64, Calendar}
 
+import com.bwsw.commitlog.CommitLogFlushPolicy
+import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnTimeInterval, ICommitLogFlushPolicy}
+
 import scala.util.matching.Regex
 
 /** Logger which stores records continuously in files in specified location.
@@ -18,7 +21,7 @@ import scala.util.matching.Regex
   * @param seconds period of time to write records into the same file, then start new file.
   * @param path location to store files at.
   */
-class CommitLog(seconds: Int, path: String) {
+class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = CommitLogFlushPolicy.OnRotation) {
   require(seconds > 0, "Seconds cannot be less than 1")
 
   val nsecs: Int = seconds
@@ -37,6 +40,9 @@ class CommitLog(seconds: Int, path: String) {
   private var lastTimeNewFileCreated: Long = -1
   private var outputStream: BufferedOutputStream = _
 
+  private var chunkWriteCount: Int = 0
+  private var chunkOpenTime: Long = 0
+
   /** Puts record and its type to an appropriate file.
     *
     * Writes data to file in format (delimiter)(BASE64-encoded type and message). When writing to one file finished,
@@ -48,17 +54,21 @@ class CommitLog(seconds: Int, path: String) {
     * @return name of file record was saved in.
     */
   def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean): String = {
+
+
     if (startNew && !firstRun) {
-      lastTimeNewFileCreated = -1
+      resetCounters()
       outputStream.close()
       writeMD5()
     }
 
-    if (firstRun || timeExceeded) {
-      if (!firstRun) {
+    if (firstRun() || timeExceeded()) {
+      if (!firstRun()) {
+        resetCounters()
         outputStream.close()
         writeMD5()
       }
+
       outputFileName = getOutputFileName(listOfExistingFileNames)
       outputFilePath = storagePath + "/" + outputFileName
       listOfExistingFileNames = outputFileName :: listOfExistingFileNames
@@ -66,14 +76,32 @@ class CommitLog(seconds: Int, path: String) {
       outputStream = new BufferedOutputStream(new FileOutputStream(outputFilePath, true))
     }
 
+    chunkWriteCount += 1
+
     val msgWithType: Array[Byte] = Array[Byte](messageType) ++ message
     Stream.continually(outputStream.write(Array[Byte](delimiter) ++ base64Encoder.encode(msgWithType)))
-    outputStream.flush()
+
+    val now: Long = System.currentTimeMillis()
+    if(policy.isInstanceOf[OnTimeInterval] && policy.asInstanceOf[OnTimeInterval].seconds * 1000 + chunkOpenTime < now) {
+      chunkOpenTime = now
+      flushStream()
+    }
+    else {
+      if (policy.isInstanceOf[OnCountInterval] && policy.asInstanceOf[OnCountInterval].count == chunkWriteCount) {
+        chunkWriteCount = 0
+        flushStream()
+      }
+    }
 
     md5.update(Array[Byte](delimiter))
     md5.update(base64Encoder.encode(msgWithType))
 
     return outputFileName
+  }
+
+  private def flushStream() = {
+    println("flushed")
+    outputStream.flush()
   }
 
   /** Return decoded messages from specified file.
@@ -124,10 +152,16 @@ class CommitLog(seconds: Int, path: String) {
     */
   def close() = {
     if (!firstRun) {
-      lastTimeNewFileCreated = -1
+      resetCounters()
       outputStream.close()
       writeMD5()
     }
+  }
+
+  private def resetCounters() = {
+    lastTimeNewFileCreated = -1
+    chunkWriteCount = 0
+    chunkOpenTime = System.currentTimeMillis()
   }
 
   private def firstRun() = {
@@ -135,9 +169,9 @@ class CommitLog(seconds: Int, path: String) {
   }
 
   private def writeMD5() = {
-    val md5towrite: String = new BigInteger(1, md5.digest()).toString(16)
+    val fileMD5: String = new BigInteger(1, md5.digest()).toString(16)
     new PrintWriter(outputFilePath + ".md5") {
-      write(md5towrite)
+      write(fileMD5)
       close()
     }
     md5.reset()
