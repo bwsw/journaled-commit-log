@@ -8,14 +8,18 @@ import java.util.Calendar
 /**
   * Created by Ivan Kudryavtsev on 26.01.2017.
   */
+
+object FilePathManager {
+  var CATALOGUE_GENERATOR = () => new SimpleDateFormat("yyyy/MM/dd").format(Calendar.getInstance.getTime)
+}
+
 class FilePathManager(rootDir: String) {
-  private var curDate: String = new SimpleDateFormat("yyyy/MM/dd").format(Calendar.getInstance.getTime)
+  private var curDate: String = FilePathManager.CATALOGUE_GENERATOR()
   private val rootPath = new File(rootDir)
   private var nextID = -1
   private val ext = ".dat"
   private val datFilter = new FilenameFilter() {
     override def accept(dir: File, name: String): Boolean = {
-      println(name)
       name.toLowerCase().endsWith(ext)
     }
   }
@@ -25,15 +29,15 @@ class FilePathManager(rootDir: String) {
 
   def getNextPath(): String = {
 
-    val testDate: String = new SimpleDateFormat("yyyy/MM/dd").format(Calendar.getInstance.getTime)
+    val testDate: String = FilePathManager.CATALOGUE_GENERATOR()
 
     if(curDate != testDate) {
       nextID = -1
       curDate = testDate
     } else {
       if(nextID >= 0) {
-        val nextPath = Paths.get(testDate, nextID.toString).toString
         nextID += 1
+        val nextPath = Paths.get(rootDir, testDate, nextID.toString).toString
         return nextPath
       }
     }
@@ -47,14 +51,13 @@ class FilePathManager(rootDir: String) {
 
       filesDir.listFiles(datFilter).foreach(f => {
         if (Integer.parseInt(f.getName.split("\\.")(0)) > max) max = Integer.parseInt(f.getName.split("\\.")(0))
-        println(f)
       })
       nextID = max + 1
       return Paths.get(rootDir, testDate, nextID.toString).toString
     }
   }
 
-  def createPath() = {
+  private def createPath() = {
     val path = new File(Paths.get(rootDir, curDate).toString)
     if(!(path.exists() && path.isDirectory())) {
       path.mkdirs()
