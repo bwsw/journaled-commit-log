@@ -10,6 +10,7 @@ import java.util.Calendar
   */
 
 object FilePathManager {
+  val EXTENSION = ".dat"
   var CATALOGUE_GENERATOR = () => new SimpleDateFormat("yyyy/MM/dd").format(Calendar.getInstance.getTime)
 }
 
@@ -17,15 +18,16 @@ class FilePathManager(rootDir: String) {
   private var curDate: String = FilePathManager.CATALOGUE_GENERATOR()
   private val rootPath = new File(rootDir)
   private var nextID = -1
-  private val ext = ".dat"
   private val datFilter = new FilenameFilter() {
     override def accept(dir: File, name: String): Boolean = {
-      name.toLowerCase().endsWith(ext)
+      name.toLowerCase().endsWith(FilePathManager.EXTENSION)
     }
   }
 
   if(!rootPath.isDirectory())
     throw new IllegalArgumentException(s"Path $rootDir doesn't exists.")
+
+  def getCurrentPath() = Paths.get(rootDir, curDate, nextID.toString).toString
 
   def getNextPath(): String = {
 

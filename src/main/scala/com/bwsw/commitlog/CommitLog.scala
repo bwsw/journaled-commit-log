@@ -8,10 +8,13 @@ import java.text.SimpleDateFormat
 import java.util.Base64.{Decoder, Encoder}
 import java.util.{Base64, Calendar}
 
-import com.bwsw.commitlog.CommitLogFlushPolicy
+import com.bwsw.commitlog.{FilePathManager, CommitLogFlushPolicy}
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnTimeInterval, ICommitLogFlushPolicy}
 
-import scala.util.matching.Regex
+
+object CommitLog {
+  val MD5EXTENSION = ".md5"
+}
 
 /** Logger which stores records continuously in files in specified location.
   *
@@ -24,19 +27,14 @@ import scala.util.matching.Regex
 class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = CommitLogFlushPolicy.OnRotation) {
   require(seconds > 0, "Seconds cannot be less than 1")
 
-  val nsecs: Int = seconds
-  val storagePath: String = path
-  private val regexFilterFiles: Regex =
-    "^\\d{4}[\\/\\.](0?[1-9]|1[012])[\\/\\.](0?[1-9]|[12][0-9]|3[01])[\\/\\.]\\d+$".r
+  private val secondsInterval: Int = seconds
+  private val storagePath: String = path
+  private val filePathManager = new FilePathManager(path)
+
   private val base64Encoder: Encoder = Base64.getEncoder
   private val md5: MessageDigest = MessageDigest.getInstance("MD5")
   private val delimiter: Byte = 0
 
-  private var listOfExistingFileNames: List[String] =
-    getListOfFiles(storagePath).filter(x => regexFilterFiles.pattern.matcher(x.getName).matches).map(file => file
-      .getName)
-  private var outputFileName: String = getOutputFileName(listOfExistingFileNames)
-  private var outputFilePath: String = storagePath + "/" + outputFileName
   private var lastTimeNewFileCreated: Long = -1
   private var outputStream: BufferedOutputStream = _
 
@@ -55,11 +53,11 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     */
   def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean): String = {
 
-
     if (startNew && !firstRun) {
       resetCounters()
       outputStream.close()
       writeMD5()
+      filePathManager.getNextPath()
     }
 
     if (firstRun() || timeExceeded()) {
@@ -68,12 +66,9 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
         outputStream.close()
         writeMD5()
       }
-
-      outputFileName = getOutputFileName(listOfExistingFileNames)
-      outputFilePath = storagePath + "/" + outputFileName
-      listOfExistingFileNames = outputFileName :: listOfExistingFileNames
+      filePathManager.getNextPath()
       lastTimeNewFileCreated = getCurrentSecs
-      outputStream = new BufferedOutputStream(new FileOutputStream(outputFilePath, true))
+      outputStream = new BufferedOutputStream(new FileOutputStream(filePathManager.getCurrentPath() + FilePathManager.EXTENSION, true))
     }
 
     chunkWriteCount += 1
@@ -96,7 +91,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     md5.update(Array[Byte](delimiter))
     md5.update(base64Encoder.encode(msgWithType))
 
-    return outputFileName
+    return filePathManager.getCurrentPath()
   }
 
   private def flushStream() = {
@@ -104,48 +99,48 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     outputStream.flush()
   }
 
-  /** Return decoded messages from specified file.
-    *
-    * @param path path to file to read data from.
-    * @return sequence of decoded messages.
-    */
-  def getMessages(path: String): IndexedSeq[Array[Byte]] = {
-    val base64decoder: Decoder = Base64.getDecoder
-    val byteArray = Files.readAllBytes(Paths.get(path))
-    var msgs: IndexedSeq[Array[Byte]] = IndexedSeq[Array[Byte]]()
-    var i = 0
-    while (i < byteArray.length) {
-      var msg: Array[Byte] = Array[Byte]()
-      if (byteArray(i) == 0) {
-        i += 1
-        while (i < byteArray.length && byteArray(i) != 0.toByte) {
-          msg = msg :+ byteArray(i)
-          i += 1
-        }
-        msgs = msgs :+ base64decoder.decode(msg)
-      } else {
-        new Exception("No zero at the beginning of a message")
-      }
-    }
-    return msgs
-  }
+//  /** Return decoded messages from specified file.
+//    *
+//    * @param path path to file to read data from.
+//    * @return sequence of decoded messages.
+//    */
+//  def getMessages(path: String): IndexedSeq[Array[Byte]] = {
+//    val base64decoder: Decoder = Base64.getDecoder
+//    val byteArray = Files.readAllBytes(Paths.get(path))
+//    var msgs: IndexedSeq[Array[Byte]] = IndexedSeq[Array[Byte]]()
+//    var i = 0
+//    while (i < byteArray.length) {
+//      var msg: Array[Byte] = Array[Byte]()
+//      if (byteArray(i) == 0) {
+//        i += 1
+//        while (i < byteArray.length && byteArray(i) != 0.toByte) {
+//          msg = msg :+ byteArray(i)
+//          i += 1
+//        }
+//        msgs = msgs :+ base64decoder.decode(msg)
+//      } else {
+//        new Exception("No zero at the beginning of a message")
+//      }
+//    }
+//    return msgs
+//  }
 
-  /** Performance test.
-    *
-    * Writes specified count of messages to file.
-    *
-    * @param countOfRecords count of records to write.
-    * @param message message to write.
-    * @param typeOfMessage type of message.
-    * @return count of milliseconds writing to file took.
-    */
-  def perf(countOfRecords: Int, message: Array[Byte], typeOfMessage: Byte): Long = {
-    require(countOfRecords > 0, "Count of records cannot be less than 1")
-
-    val before = System.currentTimeMillis()
-    for (i <- 1 to countOfRecords) putRec(message, typeOfMessage, startNew = false)
-    System.currentTimeMillis() - before
-  }
+//  /** Performance test.
+//    *
+//    * Writes specified count of messages to file.
+//    *
+//    * @param countOfRecords count of records to write.
+//    * @param message message to write.
+//    * @param typeOfMessage type of message.
+//    * @return count of milliseconds writing to file took.
+//    */
+//  def perf(countOfRecords: Int, message: Array[Byte], typeOfMessage: Byte): Long = {
+//    require(countOfRecords > 0, "Count of records cannot be less than 1")
+//
+//    val before = System.currentTimeMillis()
+//    for (i <- 1 to countOfRecords) putRec(message, typeOfMessage, startNew = false)
+//    System.currentTimeMillis() - before
+//  }
 
   /** Finishes work with current file.
     *
@@ -170,7 +165,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
 
   private def writeMD5() = {
     val fileMD5: String = new BigInteger(1, md5.digest()).toString(16)
-    new PrintWriter(outputFilePath + ".md5") {
+    new PrintWriter(filePathManager.getCurrentPath() + CommitLog.MD5EXTENSION) {
       write(fileMD5)
       close()
     }
@@ -182,40 +177,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   }
 
   private def timeExceeded(): Boolean = {
-    getCurrentSecs - lastTimeNewFileCreated > nsecs
+    getCurrentSecs - lastTimeNewFileCreated > secondsInterval
   }
 
-  /** Return next name of file based on list of existing files.
-    *
-    * Return "YYY.mm.dd.1" if there are no files with names denote current day, otherwise return
-    * "YYY.mm.dd.(next ordinal number)".
-    */
-  private def getOutputFileName(existingFiles: List[String]): String = {
-    val curDate: String = new SimpleDateFormat("yyyy.MM.dd").format(Calendar.getInstance.getTime)
-    if (existingFiles.nonEmpty) {
-      val curDates: List[String] = existingFiles.filter(file => file.startsWith(curDate))
-      if (curDates.nonEmpty) {
-        val ordinalNumbers: List[Int] = curDates.map(x => x.split("\\.").last.toInt).sortWith(_ > _)
-        return curDate + "." + (ordinalNumbers.head + 1)
-      }
-    }
-    return curDate + ".1"
-  }
-
-  /** Returns list of files from specified directory.
-    *
-    */
-  private def getListOfFiles(pathToFolder: String): List[File] = {
-    val file = new File(pathToFolder)
-    if (file.exists) {
-      if (file.isDirectory) {
-        file.listFiles.filter(_.isFile).toList
-      }
-      else {
-        throw new IllegalArgumentException("Not a directory: " + file)
-      }
-    } else {
-      throw new IllegalArgumentException("Path does not exists: " + file)
-    }
-  }
 }

@@ -1,6 +1,6 @@
 package com.bwsw.commitLog
 
-import com.bwsw.commitlog.CommitLogFlushPolicy
+import com.bwsw.commitlog.{FilePathManager, CommitLogFlushPolicy}
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
@@ -23,12 +23,12 @@ object Main extends App {
 
     commitLog.close()
 
-    println("Decoded messages:")
-    for (pathToFile <- filesPaths) {
-      val msgs: IndexedSeq[Array[Byte]] = commitLog.getMessages(storagePath + "/" + pathToFile)
-      for (msg <- msgs) {
-        println(new String(msg))
-      }
-    }
+//    println("Decoded messages:")
+//    for (pathToFile <- filesPaths) {
+//      val msgs: IndexedSeq[Array[Byte]] = commitLog.getMessages(storagePath + "/" + pathToFile)
+//      for (msg <- msgs) {
+//        println(new String(msg))
+//      }
+//    }
   }
 }
