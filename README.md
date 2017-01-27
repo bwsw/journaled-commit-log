@@ -1,2 +1,2 @@
-# journalled-commit-log
-Journalled commit log for logging actions and replaying them
+# journaled-commit-log
+Journaled commit log for logging actions and replaying them
