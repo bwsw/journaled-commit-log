@@ -35,7 +35,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   private val md5: MessageDigest = MessageDigest.getInstance("MD5")
   private val delimiter: Byte = 0
 
-  private var lastTimeNewFileCreated: Long = -1
+  private var fileCreationTime: Long = -1
   private var outputStream: BufferedOutputStream = _
 
   private var chunkWriteCount: Int = 0
@@ -51,7 +51,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     * @param startNew start new file if true.
     * @return name of file record was saved in.
     */
-  def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean): String = {
+  def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean = false): String = {
 
     if (startNew && !firstRun) {
       resetCounters()
@@ -67,7 +67,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
         writeMD5()
       }
       filePathManager.getNextPath()
-      lastTimeNewFileCreated = getCurrentSecs
+      fileCreationTime = getCurrentSecs()
       outputStream = new BufferedOutputStream(new FileOutputStream(filePathManager.getCurrentPath() + FilePathManager.EXTENSION, true))
     }
 
@@ -95,7 +95,6 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   }
 
   private def flushStream() = {
-    println("flushed")
     outputStream.flush()
   }
 
@@ -154,13 +153,13 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   }
 
   private def resetCounters() = {
-    lastTimeNewFileCreated = -1
+    fileCreationTime = -1
     chunkWriteCount = 0
     chunkOpenTime = System.currentTimeMillis()
   }
 
   private def firstRun() = {
-    lastTimeNewFileCreated == -1
+    fileCreationTime == -1
   }
 
   private def writeMD5() = {
@@ -172,12 +171,12 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     md5.reset()
   }
 
-  private def getCurrentSecs: Long = {
+  private def getCurrentSecs(): Long = {
     System.currentTimeMillis() / 1000
   }
 
   private def timeExceeded(): Boolean = {
-    getCurrentSecs - lastTimeNewFileCreated > secondsInterval
+    getCurrentSecs - fileCreationTime >= secondsInterval
   }
 
 }

@@ -48,6 +48,5 @@ class FilePathManagerTest extends FlatSpec with Matchers with BeforeAndAfterAll 
         FileVisitResult.CONTINUE
       }
     }))
-
   }
 }
