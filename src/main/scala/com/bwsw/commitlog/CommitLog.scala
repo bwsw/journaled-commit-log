@@ -6,10 +6,10 @@ import java.nio.file.{Files, Paths}
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Base64.{Decoder, Encoder}
-import java.util.{Base64, Calendar}
+import java.util.{Base64, Calendar, Date}
 
-import com.bwsw.commitlog.{FilePathManager, CommitLogFlushPolicy}
-import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnTimeInterval, ICommitLogFlushPolicy}
+import com.bwsw.commitlog.{CommitLogFile, CommitLogFlushPolicy, FilePathManager}
+import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnTimeInterval}
 
 
 object CommitLog {
@@ -28,8 +28,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   require(seconds > 0, "Seconds cannot be less than 1")
 
   private val secondsInterval: Int = seconds
-  private val storagePath: String = path
-  private val filePathManager = new FilePathManager(path)
+  private val filePathManager: FilePathManager = new FilePathManager(path)
 
   private val base64Encoder: Encoder = Base64.getEncoder
   private val md5: MessageDigest = MessageDigest.getInstance("MD5")
@@ -73,8 +72,8 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
 
     chunkWriteCount += 1
 
-    val msgWithType: Array[Byte] = Array[Byte](messageType) ++ message
-    Stream.continually(outputStream.write(Array[Byte](delimiter) ++ base64Encoder.encode(msgWithType)))
+    val encodedMsgWithType: Array[Byte] = base64Encoder.encode(Array[Byte](messageType) ++ message)
+    Stream.continually(outputStream.write(Array[Byte](delimiter) ++ encodedMsgWithType))
 
     val now: Long = System.currentTimeMillis()
     if(policy.isInstanceOf[OnTimeInterval] && policy.asInstanceOf[OnTimeInterval].seconds * 1000 + chunkOpenTime < now) {
@@ -89,13 +88,20 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     }
 
     md5.update(Array[Byte](delimiter))
-    md5.update(base64Encoder.encode(msgWithType))
+    md5.update(encodedMsgWithType)
 
-    return filePathManager.getCurrentPath()
+    return filePathManager.getCurrentPath() + FilePathManager.EXTENSION
   }
 
-  private def flushStream() = {
-    outputStream.flush()
+  /** Finishes work with current file.
+    *
+    */
+  def close() = {
+    if (!firstRun) {
+      resetCounters()
+      outputStream.close()
+      writeMD5()
+    }
   }
 
 //  /** Return decoded messages from specified file.
@@ -141,15 +147,8 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
 //    System.currentTimeMillis() - before
 //  }
 
-  /** Finishes work with current file.
-    *
-    */
-  def close() = {
-    if (!firstRun) {
-      resetCounters()
-      outputStream.close()
-      writeMD5()
-    }
+  private def flushStream() = {
+    outputStream.flush()
   }
 
   private def resetCounters() = {

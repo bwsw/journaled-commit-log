@@ -2,11 +2,11 @@ package com.bwsw.commitlog
 
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file._
-import java.io.{IOException, File}
-
+import java.io.{File, IOException, PrintWriter}
+import java.util.Date
 
 import com.bwsw.commitLog.CommitLog
-import org.scalatest.{BeforeAndAfterAll, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
   * Created by Ivan Kudryavtsev on 27.01.17.

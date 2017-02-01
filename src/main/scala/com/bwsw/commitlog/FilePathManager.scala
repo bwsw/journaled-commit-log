@@ -16,8 +16,8 @@ object FilePathManager {
 
 class FilePathManager(rootDir: String) {
   private var curDate: String = FilePathManager.CATALOGUE_GENERATOR()
-  private val rootPath = new File(rootDir)
-  private var nextID = -1
+  private val rootPath: File = new File(rootDir)
+  private var nextID: Int = -1
   private val datFilter = new FilenameFilter() {
     override def accept(dir: File, name: String): Boolean = {
       name.toLowerCase().endsWith(FilePathManager.EXTENSION)
@@ -27,7 +27,7 @@ class FilePathManager(rootDir: String) {
   if(!rootPath.isDirectory())
     throw new IllegalArgumentException(s"Path $rootDir doesn't exists.")
 
-  def getCurrentPath() = Paths.get(rootDir, curDate, nextID.toString).toString
+  def getCurrentPath(): String = Paths.get(rootDir, curDate, nextID.toString).toString
 
   def getNextPath(): String = {
 
@@ -59,7 +59,7 @@ class FilePathManager(rootDir: String) {
     }
   }
 
-  private def createPath() = {
+  private def createPath(): Boolean = {
     val path = new File(Paths.get(rootDir, curDate).toString)
     if(!(path.exists() && path.isDirectory())) {
       path.mkdirs()

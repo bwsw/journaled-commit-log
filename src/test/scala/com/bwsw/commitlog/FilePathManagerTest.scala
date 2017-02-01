@@ -3,10 +3,8 @@ package com.bwsw.commitlog
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
-import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterAll}
-import java.io.{IOException, File}
-
-
+import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import java.io.{File, IOException}
 
 /**
   * Created by Ivan Kudryavtsev on 27.01.17.
@@ -33,6 +31,10 @@ class FilePathManagerTest extends FlatSpec with Matchers with BeforeAndAfterAll 
     new File("target/2222/22/35/1.dat").createNewFile()
     FilePathManager.CATALOGUE_GENERATOR = () => "2222/22/35"
     fpm.getNextPath() shouldBe "target/2222/22/35/2"
+  }
+
+  it should "throw an exception if path is not a dir" in {
+    // TODO: write test
   }
 
   override def afterAll = {
