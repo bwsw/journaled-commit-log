@@ -2,15 +2,13 @@ package com.bwsw.commitLog
 
 import java.io._
 import java.math.BigInteger
-import java.nio.file.{Files, Paths}
 import java.security.MessageDigest
-import java.text.SimpleDateFormat
-import java.util.Base64.{Decoder, Encoder}
-import java.util.{Base64, Calendar, Date}
+import java.util.Base64
+import java.util.Base64.Encoder
 
-import com.bwsw.commitlog.{CommitLogFile, CommitLogFlushPolicy, FilePathManager}
+import com.bwsw.commitlog.CommitLogFlushPolicy
 import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnTimeInterval}
-
+import com.bwsw.commitlog.filesystem.FilePathManager
 
 object CommitLog {
   val MD5EXTENSION = ".md5"
@@ -18,25 +16,23 @@ object CommitLog {
 
 /** Logger which stores records continuously in files in specified location.
   *
-  * Stores data in files named YYYY.mm.dd.{serial number}. If it works correctly, md5-files named YYYY.mm.dd.{serial
-  * number}.md5 shall be generated as well. New file starts on user request or when configured time was exceeded.
+  * Stores data in files placed YYYY/mm/dd/{serial number}.dat. If it works correctly, md5-files placed
+  * YYYY/mm/dd/{serial number}.md5 shall be generated as well. New file start is managed by selected policy.
   *
-  * @param seconds period of time to write records into the same file, then start new file.
-  * @param path location to store files at.
+  * @param seconds period of time to write records into the same file, then start new file
+  * @param path location to store files at
+  * @param policy policy to start new files (OnRotation by default)
   */
 class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = CommitLogFlushPolicy.OnRotation) {
   require(seconds > 0, "Seconds cannot be less than 1")
 
   private val secondsInterval: Int = seconds
   private val filePathManager: FilePathManager = new FilePathManager(path)
-
   private val base64Encoder: Encoder = Base64.getEncoder
   private val md5: MessageDigest = MessageDigest.getInstance("MD5")
   private val delimiter: Byte = 0
-
   private var fileCreationTime: Long = -1
   private var outputStream: BufferedOutputStream = _
-
   private var chunkWriteCount: Int = 0
   private var chunkOpenTime: Long = 0
 
@@ -45,13 +41,12 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     * Writes data to file in format (delimiter)(BASE64-encoded type and message). When writing to one file finished,
     * md5-sum file generated.
     *
-    * @param message message to store.
-    * @param messageType type of message to store.
-    * @param startNew start new file if true.
-    * @return name of file record was saved in.
+    * @param message message to store
+    * @param messageType type of message to store
+    * @param startNew start new file if true
+    * @return name of file record was saved in
     */
   def putRec(message: Array[Byte], messageType: Byte, startNew: Boolean = false): String = {
-
     if (startNew && !firstRun) {
       resetCounters()
       outputStream.close()
@@ -93,9 +88,7 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
     return filePathManager.getCurrentPath() + FilePathManager.EXTENSION
   }
 
-  /** Finishes work with current file.
-    *
-    */
+  /** Finishes work with current file. */
   def close() = {
     if (!firstRun) {
       resetCounters()
@@ -177,5 +170,4 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
   private def timeExceeded(): Boolean = {
     getCurrentSecs - fileCreationTime >= secondsInterval
   }
-
 }

@@ -1,8 +1,8 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
 import java.io.{BufferedOutputStream, File, FileOutputStream, IOException}
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file._
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.bwsw.commitLog.CommitLog
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -81,8 +81,24 @@ class CommitLogFileIteratorTest extends FlatSpec with Matchers with BeforeAndAft
     commitLogFileIterator.close()
   }
 
-  it should "Throw IOException when separator is missing" in {
-    //TODO: write test
+  it should "Throw IOException when separator at the beginning of file is missing" in {
+    val commitLog = new CommitLog(10, dir)
+    commitLog.putRec(Array[Byte](6, 7, 8), 5, startNew = false)
+    commitLog.putRec(Array[Byte](7, 8, 9), 6, startNew = false)
+    commitLog.putRec(Array[Byte](5, 7, 9), 3, startNew = false)
+    val fileName = commitLog.putRec(Array[Byte](7, 8, 9), 6, startNew = false)
+    commitLog.close()
+
+    val bytesArray: Array[Byte] = Files.readAllBytes(Paths.get(fileName))
+
+    val croppedFileName = fileName + ".cropped"
+    val outputStream = new BufferedOutputStream(new FileOutputStream(croppedFileName))
+    Stream.continually(outputStream.write(bytesArray.slice(1, 35)))
+    outputStream.close()
+
+    intercept[IOException] {
+      val commitLogFileIterator = new CommitLogFileIterator(croppedFileName)
+    }
   }
 
   override def afterAll = {

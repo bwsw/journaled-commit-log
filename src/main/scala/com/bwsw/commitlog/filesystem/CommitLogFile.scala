@@ -1,13 +1,16 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
 import java.io.{File, FileInputStream, FileNotFoundException}
 import java.math.BigInteger
 import java.security.MessageDigest
 
+import com.bwsw.commitlog.utils.utils
+
 import scala.io.Source
 
-/**
-  * Created by zhdanovks on 31.01.17.
+/** Represents commitlog file with data.
+  *
+  * @param path full path to file
   */
 class CommitLogFile(path: String) {
   val file = new File(path)
@@ -17,15 +20,16 @@ class CommitLogFile(path: String) {
     md5 = Some(Source.fromFile(md5File).getLines.mkString)
   }
 
+  /** Returns an iterator over records */
   def getIterator(): CommitLogFileIterator = new CommitLogFileIterator(file.toString)
 
   /** Returns calculated MD5 of this file. */
   def calculateMD5(): String = {
     val fileInputStream = new FileInputStream(file)
-    val stream = fileContentStream(fileInputStream) takeWhile { chunk => chunk._1 > 0 }
+    val stream = utils.fileContentStream(fileInputStream) takeWhile { chunk => chunk._1 }
     val md5: MessageDigest = MessageDigest.getInstance("MD5")
     md5.reset()
-    stream.foreach(elem => md5.update(elem._2, 0, elem._1))
+    stream.foreach(elem => if (elem._1) md5.update(elem._2.get))
     fileInputStream.close()
     new BigInteger(1, md5.digest()).toString(16)
   }
@@ -39,14 +43,8 @@ class CommitLogFile(path: String) {
     }
   }
 
-  /** Checks md5 sum of file with existing md5 sum. */
+  /** Checks md5 sum of file with existing md5 sum. Throws an exception when no MD5 exists. */
   def checkMD5(): Boolean = {
     getMD5() == calculateMD5()
-  }
-
-  private def fileContentStream(fileIn: FileInputStream): Stream[(Int, Array[Byte])] = {
-    val bytes = Array.fill[Byte](1024)(0)
-    val length = fileIn.read(bytes)
-    (length, bytes) #:: fileContentStream(fileIn)
   }
 }

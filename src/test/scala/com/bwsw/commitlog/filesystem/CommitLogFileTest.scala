@@ -1,8 +1,8 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
 import java.io.{File, FileNotFoundException, IOException, PrintWriter}
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file._
+import java.nio.file.attribute.BasicFileAttributes
 
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
@@ -31,12 +31,12 @@ class CommitLogFileTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     new File(pathNotEmptyFile).createNewFile()
     new File(pathNotEmptyFile2).createNewFile()
     new File(pathNotEmptyFile3).createNewFile()
-    new PrintWriter(pathNotEmptyFile) {
-      write("1")
-      close()
-    }
     new PrintWriter(pathEmptyFileMD5) {
       write(md5EmptyFile)
+      close()
+    }
+    new PrintWriter(pathNotEmptyFile) {
+      write("1")
       close()
     }
     new PrintWriter(pathNotEmptyFileMD5) {
@@ -71,10 +71,6 @@ class CommitLogFileTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     intercept[FileNotFoundException] {
       clfNotEmpty3.getMD5()
     }
-  }
-
-  it should "return corrrect iterator" in {
-    // TODO: write test
   }
 
   override def afterAll = {

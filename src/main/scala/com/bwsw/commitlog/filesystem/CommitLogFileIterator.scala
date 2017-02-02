@@ -1,11 +1,13 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
 import java.io.{File, FileInputStream, IOException}
 import java.util.Base64
-import java.util.Base64.Decoder
 
-/**
-  * Created by zhdanovks on 31.01.17.
+import com.bwsw.commitlog.utils.utils
+
+/** Iterator over records of the commitlog file.
+  *
+  * @param path full path to file
   */
 class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
   private var isClosed: Boolean = false
@@ -16,7 +18,7 @@ class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
       isClosed = true
     }
   }
-  private var stream: Stream[(Int, Byte)] = fileContentStream(fileInputStream)
+  private var stream = utils.fileContentStream(fileInputStream)
   private var nextRecord: Option[Array[Byte]] = getNextRecord()
 
   override def hasNext(): Boolean = nextRecord.isDefined
@@ -32,16 +34,21 @@ class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
       fileInputStream.close()
   }
 
+  private def fetchNextRecord() = {
+    nextRecord = getNextRecord()
+  }
+
+  /** Returns next record from file whether it exists. */
   private def getNextRecord(): Option[Array[Byte]] = {
     var res: Array[Byte] = new Array[Byte](0)
-    if (stream.head._1 > 0) {
-      if (stream.head._2 == 0) {
+    if (stream.head._1) {
+      if (stream.head._2.get == 0) {
         stream = stream.tail
       } else {
-        throw new IOException("Missing separator in file " + path)
+        throw new IOException("Missing separator at the beginning of file " + path)
       }
-      while (stream.head._1 > 0 && stream.head._2 != 0) {
-        res = res :+ stream.head._2
+      while (stream.head._1 && stream.head._2.get != 0) {
+        res = res :+ stream.head._2.get
         stream = stream.tail
       }
     } else {
@@ -49,15 +56,5 @@ class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
       return None
     }
     return Some(Base64.getDecoder.decode(res))
-  }
-
-  private def fetchNextRecord() = {
-    nextRecord = getNextRecord()
-  }
-
-  private def fileContentStream(fileIn: FileInputStream): Stream[(Int, Byte)] = {
-    val bytes = Array.fill[Byte](1)(0)
-    val length = fileIn.read(bytes)
-    (length, bytes(0)) #:: fileContentStream(fileIn)
   }
 }

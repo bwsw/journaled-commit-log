@@ -1,9 +1,8 @@
 package com.bwsw.commitlog
 
-import java.nio.file.attribute.BasicFileAttributes
+import java.io.{File, IOException}
 import java.nio.file._
-import java.io.{File, IOException, PrintWriter}
-import java.util.Date
+import java.nio.file.attribute.BasicFileAttributes
 
 import com.bwsw.commitLog.CommitLog
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
@@ -21,12 +20,14 @@ class CommitLogTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   it should "write correctly" in {
     val cl = new CommitLog(1, dir)
-    val f1 = cl.putRec(rec,0)
+    val f1 = cl.putRec(rec, 0)
     Thread.sleep(1100)
-    val f2 = cl.putRec(rec,0)
+    val f2 = cl.putRec(rec, 0)
     cl.close()
     f1 == f2 shouldBe false
   }
+
+  // TODO: check all policies
 
   override def afterAll = {
     List(dir).foreach(dir =>

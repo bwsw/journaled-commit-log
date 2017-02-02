@@ -1,4 +1,4 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
 import java.io.{File, FilenameFilter}
 import java.nio.file.Paths
@@ -14,6 +14,10 @@ object FilePathManager {
   var CATALOGUE_GENERATOR = () => new SimpleDateFormat("yyyy/MM/dd").format(Calendar.getInstance.getTime)
 }
 
+/** Manages commitlog filesystem.
+  *
+  * @param rootDir root directory of commitlog
+  */
 class FilePathManager(rootDir: String) {
   private var curDate: String = FilePathManager.CATALOGUE_GENERATOR()
   private val rootPath: File = new File(rootDir)
@@ -30,7 +34,6 @@ class FilePathManager(rootDir: String) {
   def getCurrentPath(): String = Paths.get(rootDir, curDate, nextID.toString).toString
 
   def getNextPath(): String = {
-
     val testDate: String = FilePathManager.CATALOGUE_GENERATOR()
 
     if(curDate != testDate) {
@@ -67,5 +70,4 @@ class FilePathManager(rootDir: String) {
     } else
       false
   }
-
 }

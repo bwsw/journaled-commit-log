@@ -1,10 +1,10 @@
-package com.bwsw.commitlog
+package com.bwsw.commitlog.filesystem
 
+import java.io.{File, IOException}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
-import java.io.{File, IOException}
 
 /**
   * Created by Ivan Kudryavtsev on 27.01.17.
@@ -34,7 +34,15 @@ class FilePathManagerTest extends FlatSpec with Matchers with BeforeAndAfterAll 
   }
 
   it should "throw an exception if path is not a dir" in {
-    // TODO: write test
+    val dir = "target/fpm"
+    new File(dir).mkdirs()
+    new File("target/fpm/0.dat").createNewFile()
+    intercept[IllegalArgumentException] {
+      val fpm1 = new FilePathManager("target/fpm/0.dat")
+    }
+    intercept[IllegalArgumentException] {
+      val fpm2 = new FilePathManager("")
+    }
   }
 
   override def afterAll = {
