@@ -7,7 +7,7 @@ import java.util.Base64
 import java.util.Base64.Encoder
 
 import com.bwsw.commitlog.CommitLogFlushPolicy
-import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnTimeInterval}
+import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnTimeInterval, OnRotation}
 import com.bwsw.commitlog.filesystem.FilePathManager
 
 object CommitLog {
@@ -17,13 +17,14 @@ object CommitLog {
 /** Logger which stores records continuously in files in specified location.
   *
   * Stores data in files placed YYYY/mm/dd/{serial number}.dat. If it works correctly, md5-files placed
-  * YYYY/mm/dd/{serial number}.md5 shall be generated as well. New file start is managed by selected policy.
+  * YYYY/mm/dd/{serial number}.md5 shall be generated as well. New file starts on user request or when configured time
+  * was exceeded.
   *
   * @param seconds period of time to write records into the same file, then start new file
   * @param path location to store files at
-  * @param policy policy to start new files (OnRotation by default)
+  * @param policy policy to flush data into file (OnRotation by default)
   */
-class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = CommitLogFlushPolicy.OnRotation) {
+class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = OnRotation) {
   require(seconds > 0, "Seconds cannot be less than 1")
 
   private val secondsInterval: Int = seconds
@@ -62,25 +63,26 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = Comm
       }
       filePathManager.getNextPath()
       fileCreationTime = getCurrentSecs()
+      // TODO(remove this):write here chunkOpenTime or we will write first record instantly if OnTimeInterval policy set
+//      chunkOpenTime = System.currentTimeMillis()
       outputStream = new BufferedOutputStream(new FileOutputStream(filePathManager.getCurrentPath() + FilePathManager.EXTENSION, true))
     }
 
     chunkWriteCount += 1
 
-    val encodedMsgWithType: Array[Byte] = base64Encoder.encode(Array[Byte](messageType) ++ message)
-    Stream.continually(outputStream.write(Array[Byte](delimiter) ++ encodedMsgWithType))
-
     val now: Long = System.currentTimeMillis()
-    if(policy.isInstanceOf[OnTimeInterval] && policy.asInstanceOf[OnTimeInterval].seconds * 1000 + chunkOpenTime < now) {
-      chunkOpenTime = now
-      flushStream()
-    }
-    else {
-      if (policy.isInstanceOf[OnCountInterval] && policy.asInstanceOf[OnCountInterval].count == chunkWriteCount) {
+    policy match {
+      case interval: OnTimeInterval if interval.seconds * 1000 + chunkOpenTime < now =>
+        chunkOpenTime = now
+        flushStream()
+      case interval: OnCountInterval if interval.count == chunkWriteCount =>
         chunkWriteCount = 0
         flushStream()
-      }
+      case _ =>
     }
+
+    val encodedMsgWithType: Array[Byte] = base64Encoder.encode(Array[Byte](messageType) ++ message)
+    Stream.continually(outputStream.write(Array[Byte](delimiter) ++ encodedMsgWithType))
 
     md5.update(Array[Byte](delimiter))
     md5.update(encodedMsgWithType)

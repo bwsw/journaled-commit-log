@@ -5,15 +5,15 @@ object CommitLogFlushPolicy {
   /** Basic trait for all policies */
   trait ICommitLogFlushPolicy
 
-  /** User must decide by himself when start to write records to new file. */
+  /** Data is flushed into file when new file starts. */
   case object OnRotation extends ICommitLogFlushPolicy
 
-  /** New file starts when specified count of seconds from last writing operation pass. */
+  /** Data is flushed into file when specified count of seconds from last flush operation passed. */
   case class OnTimeInterval(seconds: Integer) extends ICommitLogFlushPolicy {
     require(seconds > 0, "Interval of seconds must be greater that 0.")
   }
 
-  /** New file starts after specified count of write operations. */
+  /** Data is flushed into file when specified count of write operations passed. */
   case class OnCountInterval(count: Integer) extends ICommitLogFlushPolicy {
     require(count > 0, "Interval of writes must be greater that 0.")
   }
