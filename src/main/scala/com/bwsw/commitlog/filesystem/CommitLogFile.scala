@@ -13,11 +13,16 @@ import scala.io.Source
   * @param path full path to file
   */
 class CommitLogFile(path: String) {
-  val file = new File(path)
-  val md5File = new File(file.toString.split('.')(0) + ".md5")
-  var md5: Option[String] = None
+  private val file = new File(path)
+  private val md5File = new File(file.toString.split('.')(0) + ".md5")
+  private var md5: Option[String] = None
   if (md5File.exists()) {
     md5 = Some(Source.fromFile(md5File).getLines.mkString)
+  }
+
+  /** Returns underlying file. */
+  def getFile(): File = {
+    file
   }
 
   /** Returns an iterator over records */
@@ -46,5 +51,10 @@ class CommitLogFile(path: String) {
   /** Checks md5 sum of file with existing md5 sum. Throws an exception when no MD5 exists. */
   def checkMD5(): Boolean = {
     getMD5() == calculateMD5()
+  }
+
+  /** Returns true if md5-file exists. */
+  def md5Exists(): Boolean = {
+    !md5.isEmpty
   }
 }

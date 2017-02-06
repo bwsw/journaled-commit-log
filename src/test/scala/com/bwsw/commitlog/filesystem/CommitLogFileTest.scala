@@ -62,9 +62,13 @@ class CommitLogFileTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     clfEmpty.calculateMD5() == md5EmptyFile shouldBe true
     clfNotEmpty.calculateMD5() == md5NotEmptyFile shouldBe true
     clfNotEmpty2.calculateMD5() == md5NotEmptyFile shouldBe false
+    clfEmpty.md5Exists() shouldBe true
     clfEmpty.checkMD5() shouldBe true
+    clfNotEmpty.md5Exists() shouldBe true
     clfNotEmpty.checkMD5() shouldBe true
+    clfNotEmpty2.md5Exists() shouldBe true
     clfNotEmpty2.checkMD5() shouldBe false
+    clfNotEmpty3.md5Exists() shouldBe false
     intercept[FileNotFoundException] {
       clfNotEmpty3.checkMD5()
     }
