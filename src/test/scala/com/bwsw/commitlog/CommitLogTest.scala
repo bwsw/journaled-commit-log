@@ -5,7 +5,7 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.bwsw.commitLog.CommitLog
-import com.bwsw.commitlog.CommitLogFlushPolicy.{OnRotation, OnTimeInterval}
+import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**
@@ -49,7 +49,7 @@ class CommitLogTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     f1 == f3 shouldBe false
   }
 
-  it should "write correctly (OnTimeInterval policy)" in {
+  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds > policy seconds" in {
     val cl = new CommitLog(4, dir, OnTimeInterval(2))
     val f11 = cl.putRec(rec, 0)
     val fileF1 = new File(f11)
@@ -95,12 +95,47 @@ class CommitLogTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     f2 == f3 shouldBe false
     f3 == f4 shouldBe false
     f4 == f5 shouldBe false
+  }
 
-    // TODO: check case when seconds less than policy seconds
+  it should "write correctly (OnTimeInterval policy) when startNewFileSeconds < policy seconds" in {
+    val cl = new CommitLog(2, dir, OnTimeInterval(4))
+    val f11 = cl.putRec(rec, 0)
+    val fileF1 = new File(f11)
+    fileF1.exists() shouldBe true
+    fileF1.length() == 0 shouldBe true
+    Thread.sleep(2100)
+    val f2 = cl.putRec(rec, 0)
+    fileF1.length() == 21 shouldBe true
+    f11 == f2 shouldBe false
+    val fileF2 = new File(f2)
+    fileF2.exists() shouldBe true
+    fileF2.length() == 0 shouldBe true
+    cl.close()
+    fileF2.length() == 21 shouldBe true
   }
 
   it should "write correctly (OnCountInterval policy)" in {
-    // TODO: write test
+    val cl = new CommitLog(2, dir, OnCountInterval(2))
+    val f11 = cl.putRec(rec, 0)
+    val f12 = cl.putRec(rec, 0)
+    f11 == f12 shouldBe true
+    val fileF1 = new File(f11)
+    fileF1.exists() shouldBe true
+    fileF1.length() == 0 shouldBe true
+    val f13 = cl.putRec(rec, 0)
+    f11 == f13 shouldBe true
+    fileF1.exists() shouldBe true
+    fileF1.length() == 42 shouldBe true
+    Thread.sleep(2100)
+    fileF1.length() == 42 shouldBe true
+    val f2 = cl.putRec(rec, 0)
+    fileF1.length() == 63 shouldBe true
+    f11 == f2 shouldBe false
+    val fileF2 = new File(f2)
+    fileF2.exists() shouldBe true
+    fileF2.length() == 0 shouldBe true
+    cl.close()
+    fileF2.length() == 21 shouldBe true
   }
 
   override def afterAll = {

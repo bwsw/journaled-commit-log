@@ -68,8 +68,6 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = OnRo
       outputStream = new BufferedOutputStream(new FileOutputStream(filePathManager.getCurrentPath() + FilePathManager.EXTENSION, true))
     }
 
-    chunkWriteCount += 1
-
     val now: Long = System.currentTimeMillis()
     policy match {
       case interval: OnTimeInterval if interval.seconds * 1000 + chunkOpenTime < now =>
@@ -83,6 +81,8 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = OnRo
 
     val encodedMsgWithType: Array[Byte] = base64Encoder.encode(Array[Byte](messageType) ++ message)
     Stream.continually(outputStream.write(Array[Byte](delimiter) ++ encodedMsgWithType))
+
+    chunkWriteCount += 1
 
     md5.update(Array[Byte](delimiter))
     md5.update(encodedMsgWithType)
