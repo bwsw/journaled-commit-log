@@ -3,10 +3,15 @@ package com.bwsw.commitlog.utils
 import java.io.FileInputStream
 
 object utils {
-  /** Converts FileInputStream to scala stream of pairs (still have data, Option[byte]). */
-  def fileContentStream(fileIn: FileInputStream): Stream[(Boolean, Option[Byte])] = {
-    val bytes = Array.fill[Byte](1)(0)
+  /** Converts FileInputStream to scala stream of pairs (count of bytes, Array[Byte]).
+    *
+    * @param fileIn file to convert to stream.
+    * @param bufferSize size of buffer to use.
+    * @return stream of pairs (count of bytes, Array[Byte]).
+    */
+  def fileContentStream(fileIn: FileInputStream, bufferSize: Int): Stream[(Int, Array[Byte])] = {
+    val bytes = Array.fill[Byte](bufferSize)(0)
     val length = fileIn.read(bytes)
-    (length > 0, if (length > 0) Some(bytes.head) else None) #:: fileContentStream(fileIn)
+    (length, bytes) #:: fileContentStream(fileIn, bufferSize)
   }
 }

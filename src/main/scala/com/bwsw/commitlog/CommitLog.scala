@@ -6,8 +6,7 @@ import java.security.MessageDigest
 import java.util.Base64
 import java.util.Base64.Encoder
 
-import com.bwsw.commitlog.CommitLogFlushPolicy
-import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnTimeInterval, OnRotation}
+import com.bwsw.commitlog.CommitLogFlushPolicy.{ICommitLogFlushPolicy, OnCountInterval, OnRotation, OnTimeInterval}
 import com.bwsw.commitlog.filesystem.FilePathManager
 
 object CommitLog {

@@ -31,10 +31,10 @@ class CommitLogFile(path: String) {
   /** Returns calculated MD5 of this file. */
   def calculateMD5(): String = {
     val fileInputStream = new FileInputStream(file)
-    val stream = utils.fileContentStream(fileInputStream) takeWhile { chunk => chunk._1 }
+    val stream = utils.fileContentStream(fileInputStream, 512).takeWhile(elem => elem._1 != -1)
     val md5: MessageDigest = MessageDigest.getInstance("MD5")
     md5.reset()
-    stream.foreach(elem => if (elem._1) md5.update(elem._2.get))
+    stream.foreach(elem => md5.update(elem._2.slice(0, elem._1)))
     fileInputStream.close()
     new BigInteger(1, md5.digest()).toString(16)
   }
@@ -54,7 +54,5 @@ class CommitLogFile(path: String) {
   }
 
   /** Returns true if md5-file exists. */
-  def md5Exists(): Boolean = {
-    !md5.isEmpty
-  }
+  def md5Exists(): Boolean = md5.isDefined
 }
