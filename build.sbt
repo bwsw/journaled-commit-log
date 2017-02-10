@@ -1,6 +1,6 @@
 name := "journaled-commit-log"
 
-val jclVersion = "1.0"
+val jclVersion = "1.0.0-SNAPSHOT"
 
 version := jclVersion
 
@@ -40,13 +40,13 @@ publishTo := {
 }
 
 publishArtifact in Test := false
+assemblyJarName in assembly := s"${name.value}-${jclVersion}.jar"
 
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.12" % "3.0.1")
 
-assemblyJarName in assembly := "journaled-commit-log-" + jclVersion + ".jar"
 
 assemblyMergeStrategy in assembly := {
   case x =>
