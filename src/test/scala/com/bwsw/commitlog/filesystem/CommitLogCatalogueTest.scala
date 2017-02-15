@@ -5,7 +5,7 @@ import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Date
 
-import com.bwsw.commitLog.CommitLog
+import com.bwsw.commitlog.CommitLog
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 /**

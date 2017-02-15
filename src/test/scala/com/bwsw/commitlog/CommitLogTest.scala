@@ -4,7 +4,6 @@ import java.io.{File, IOException}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.bwsw.commitLog.CommitLog
 import com.bwsw.commitlog.CommitLogFlushPolicy.{OnCountInterval, OnRotation, OnTimeInterval}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
