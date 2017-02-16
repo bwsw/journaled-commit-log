@@ -2,7 +2,7 @@ package com.bwsw.commitlog.utils
 
 import java.io.FileInputStream
 
-object utils {
+object Utils {
   /** Converts FileInputStream to scala stream of pairs (count of bytes, Array[Byte]).
     *
     * @param fileIn file to convert to stream.
