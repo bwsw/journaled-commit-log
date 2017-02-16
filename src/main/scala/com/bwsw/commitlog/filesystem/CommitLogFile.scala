@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream, FileNotFoundException}
 import java.math.BigInteger
 import java.security.MessageDigest
 
-import com.bwsw.commitlog.utils.utils
+import com.bwsw.commitlog.utils.Utils
 
 import scala.io.Source
 
@@ -31,7 +31,7 @@ class CommitLogFile(path: String) {
   /** Returns calculated MD5 of this file. */
   def calculateMD5(): String = {
     val fileInputStream = new FileInputStream(file)
-    val stream = utils.fileContentStream(fileInputStream, 512).takeWhile(elem => elem._1 != -1)
+    val stream = Utils.fileContentStream(fileInputStream, 512).takeWhile(elem => elem._1 != -1)
     val md5: MessageDigest = MessageDigest.getInstance("MD5")
     md5.reset()
     stream.foreach(elem => md5.update(elem._2.slice(0, elem._1)))
