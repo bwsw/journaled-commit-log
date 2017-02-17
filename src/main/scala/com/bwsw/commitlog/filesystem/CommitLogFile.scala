@@ -15,10 +15,6 @@ import scala.io.Source
 class CommitLogFile(path: String) {
   private val file = new File(path)
   private val md5File = new File(file.toString.split('.')(0) + ".md5")
-  private var md5: Option[String] = None
-  if (md5File.exists()) {
-    md5 = Some(Source.fromFile(md5File).getLines.mkString)
-  }
 
   /** Returns underlying file. */
   def getFile(): File = {
@@ -39,20 +35,15 @@ class CommitLogFile(path: String) {
     new BigInteger(1, md5.digest()).toString(16)
   }
 
+  /** Returns a MD5 sum from MD5 FIle */
+  private def getContentOfMD5File = Source.fromFile(md5File).getLines.mkString
+
   /** Returns existing MD5 of this file. Throws an exception otherwise. */
-  def getMD5(): String = {
-    if (md5.isEmpty) {
-      throw new FileNotFoundException("No MD5 file for " + path)
-    } else {
-      md5.get
-    }
-  }
+  def getMD5(): String = if (!md5File.exists()) throw new FileNotFoundException("No MD5 file for " + path) else getContentOfMD5File
 
   /** Checks md5 sum of file with existing md5 sum. Throws an exception when no MD5 exists. */
-  def checkMD5(): Boolean = {
-    getMD5() == calculateMD5()
-  }
+  def checkMD5(): Boolean = getMD5 == calculateMD5()
 
   /** Returns true if md5-file exists. */
-  def md5Exists(): Boolean = md5.isDefined
+  def md5Exists(): Boolean = md5File.exists()
 }
