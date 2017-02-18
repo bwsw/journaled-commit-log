@@ -156,11 +156,13 @@ class CommitLog(seconds: Int, path: String, policy: ICommitLogFlushPolicy = OnRo
   }
 
   private def writeMD5() = {
-    val fileMD5: String = new BigInteger(1, md5.digest()).toString(16)
-    new PrintWriter(filePathManager.getCurrentPath() + CommitLog.MD5EXTENSION) {
+    val fileMD5 = new BigInteger(1, md5.digest()).toByteArray
+
+    new FileOutputStream(filePathManager.getCurrentPath() + CommitLog.MD5EXTENSION) {
       write(fileMD5)
       close()
     }
+
     md5.reset()
   }
 
