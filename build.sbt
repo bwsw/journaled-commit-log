@@ -1,6 +1,6 @@
 name := "journaled-commit-log"
 
-val jclVersion = "1.0.0-RC1"
+val jclVersion = "1.0.1-RC1"
 
 version := jclVersion
 
