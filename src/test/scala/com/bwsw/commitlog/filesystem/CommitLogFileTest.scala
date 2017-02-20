@@ -1,6 +1,6 @@
 package com.bwsw.commitlog.filesystem
 
-import java.io.{File, FileNotFoundException, IOException, PrintWriter}
+import java.io._
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
 
@@ -31,35 +31,38 @@ class CommitLogFileTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     new File(pathNotEmptyFile).createNewFile()
     new File(pathNotEmptyFile2).createNewFile()
     new File(pathNotEmptyFile3).createNewFile()
-    new PrintWriter(pathEmptyFileMD5) {
-      write(md5EmptyFile)
+
+    new FileOutputStream(pathEmptyFileMD5) {
+      write(md5EmptyFile.getBytes())
       close()
     }
-    new PrintWriter(pathNotEmptyFile) {
-      write("1")
+    new FileOutputStream(pathNotEmptyFile) {
+      write("1".getBytes())
       close()
     }
-    new PrintWriter(pathNotEmptyFileMD5) {
-      write(md5NotEmptyFile)
+    new FileOutputStream(pathNotEmptyFileMD5) {
+      write(md5NotEmptyFile.getBytes())
       close()
     }
-    new PrintWriter(pathNotEmptyFile2) {
-      write("2")
+    new FileOutputStream(pathNotEmptyFile2) {
+      write("2".getBytes())
       close()
     }
-    new PrintWriter(pathNotEmptyFile2MD5) {
-      write(md5NotEmptyFile)
+    new FileOutputStream(pathNotEmptyFile2MD5) {
+      write(md5NotEmptyFile.getBytes())
       close()
     }
-    new PrintWriter(pathNotEmptyFile3) {
-      write("3")
+    new FileOutputStream(pathNotEmptyFile3) {
+      write("3".getBytes())
       close()
     }
+
     val clfEmpty = new CommitLogFile(pathEmptyFile)
     val clfNotEmpty = new CommitLogFile(pathNotEmptyFile)
     val clfNotEmpty2 = new CommitLogFile(pathNotEmptyFile2)
     val clfNotEmpty3 = new CommitLogFile(pathNotEmptyFile3)
-    clfEmpty.calculateMD5() == md5EmptyFile shouldBe true
+
+    clfEmpty.calculateMD5() ==  md5EmptyFile shouldBe true
     clfNotEmpty.calculateMD5() == md5NotEmptyFile shouldBe true
     clfNotEmpty2.calculateMD5() == md5NotEmptyFile shouldBe false
     clfEmpty.md5Exists() shouldBe true
