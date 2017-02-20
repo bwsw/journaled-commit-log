@@ -1,6 +1,6 @@
 name := "journaled-commit-log"
 
-val jclVersion = "1.0.0-SNAPSHOT"
+val jclVersion = "1.0.1-SNAPSHOT"
 
 version := jclVersion
 
@@ -46,7 +46,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.21",
   "org.slf4j" % "slf4j-simple" % "1.7.21",
   "org.scalatest" % "scalatest_2.12" % "3.0.1")
-
 
 assemblyMergeStrategy in assembly := {
   case x =>

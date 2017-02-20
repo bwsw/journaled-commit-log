@@ -20,9 +20,17 @@ class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
   override def hasNext(): Boolean = {
     if (stream.available() > 0) true
     else {
+      close()
+      false
+    }
+  }
+
+  private var isNotClosed = true
+  def close(): Unit = {
+    if (isNotClosed) {
       stream.close()
       fileInputStream.close()
-      false
+      isNotClosed = false
     }
   }
 
@@ -37,6 +45,6 @@ class CommitLogFileIterator(path: String) extends Iterator[Array[Byte]] {
     }) {
       record += byte.toByte
     }
-    Base64.getDecoder.decode(record.toArray)
+   Base64.getDecoder.decode(record.toArray)
   }
 }
